@@ -1,4 +1,4 @@
-const CACHE = 'controle-mensal-v2';
+const CACHE = 'controle-mensal-v3';
 const ASSETS = [
   './',
   './index.html',
