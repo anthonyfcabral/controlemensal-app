@@ -9,6 +9,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Firebase (v9 Compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <style>
     :root{
       --bg:#07111f;
@@ -58,6 +62,7 @@
       line-height:1.1;
       background:linear-gradient(135deg,#f8fafc,#94a3b8);
       -webkit-background-clip:text;
+      background-clip:text;
       -webkit-text-fill-color:transparent;
     }
     .title-wrap p{color:var(--muted);font-size:.9rem;margin-top:4px}
@@ -319,6 +324,14 @@
       <h1>📊 Controle Mensal</h1>
       <p id="subtitleLabel">Resumo financeiro completo do mês</p>
     </div>
+    <div id="authArea" style="display:flex;align-items:center;gap:12px">
+      <div id="userProfile" style="display:none;align-items:center;gap:8px">
+        <img id="userImg" src="" style="width:32px;height:32px;border-radius:50%;border:2px solid var(--primary)"/>
+        <span id="userName" style="font-size:.85rem;font-weight:600;color:var(--muted)"></span>
+      </div>
+      <button class="btn btn-ghost" id="btnLogin" style="font-size:.78rem">🔑 Login Cloud</button>
+      <button class="btn btn-ghost" id="btnLogout" style="font-size:.78rem;display:none">🚪 Sair</button>
+    </div>
   <div class="nav-controls">
       <select id="selMonth"></select>
       <select id="selYear"></select>
@@ -482,6 +495,26 @@
 </div>
 
 <script>
+// ─── FIREBASE CONFIG ──────────────────────────────────────────────────
+// Cole suas chaves do Firebase aqui
+const firebaseConfig = {
+  apiKey: "AIzaSyDgYqZYk9XzeifW-SJ0m2iGyZtMToNnGEU",
+  authDomain: "controlemensal-app.firebaseapp.com",
+  projectId: "controlemensal-app",
+  storageBucket: "controlemensal-app.firebasestorage.app",
+  messagingSenderId: "436594521023",
+  appId: "1:436594521023:web:df522d06f685d3cb30e70a"
+};
+
+let app, auth, db, user = null;
+try {
+  if (firebaseConfig.apiKey !== "SUA_API_KEY") {
+    app = firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+  }
+} catch(e) { console.error("Firebase Init Error:", e); }
+
 // ─── UTILS ────────────────────────────────────────────────────────────
 function money(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
 function parseBR(x){
@@ -511,7 +544,74 @@ function loadDB(){
   }catch(e){}
   return {months:{}};
 }
-function saveDB(){ localStorage.setItem(DB_KEY,JSON.stringify(state.db)); }
+function saveDB(){ 
+  const raw = JSON.stringify(state.db);
+  localStorage.setItem(DB_KEY, raw);
+  syncToCloud(raw);
+}
+
+// ─── CLOUD SYNC ──────────────────────────────────────────────────────
+let syncTimer = null;
+function syncToCloud(raw) {
+  if (!db || !user) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(async () => {
+    try {
+      await db.collection('users').doc(user.uid).set({ 
+        db: JSON.parse(raw), 
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp() 
+      }, { merge: true });
+      console.log("☁️ Sincronizado com a nuvem");
+    } catch (e) { console.error("Cloud Sync Error:", e); }
+  }, 2000); // 2s debounce
+}
+
+async function loadFromCloud() {
+  if (!db || !user) return;
+  try {
+    const doc = await db.collection('users').doc(user.uid).get();
+    if (doc.exists && doc.data().db) {
+      const cloudData = doc.data().db;
+      // Merge ou Sobrescrever? Geralmente sobrescrever local com nuvem no login é mais seguro
+      state.db = cloudData;
+      saveDB(); // Atualiza local
+      renderAll();
+      toast("☁️ Dados carregados da nuvem");
+    }
+  } catch (e) { console.error("Load Cloud Error:", e); }
+}
+
+// ─── AUTH ─────────────────────────────────────────────────────────────
+document.getElementById('btnLogin').onclick = () => {
+  if (!auth) { toast("⚠️ Configure as chaves do Firebase primeiro!"); return; }
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(e => toast("❌ Erro no login: " + e.message));
+};
+
+document.getElementById('btnLogout').onclick = () => { auth.signOut(); };
+
+function initAuth() {
+  if (!auth) return;
+  auth.onAuthStateChanged(u => {
+    user = u;
+    const btnL = document.getElementById('btnLogin');
+    const btnO = document.getElementById('btnLogout');
+    const prof = document.getElementById('userProfile');
+    
+    if (user) {
+      btnL.style.display = 'none';
+      btnO.style.display = 'block';
+      prof.style.display = 'flex';
+      document.getElementById('userName').textContent = user.displayName.split(' ')[0];
+      document.getElementById('userImg').src = user.photoURL;
+      loadFromCloud();
+    } else {
+      btnL.style.display = 'block';
+      btnO.style.display = 'none';
+      prof.style.display = 'none';
+    }
+  });
+}
 function monthKey(y,m){ return `${y}-${String(m+1).padStart(2,'0')}`; }
 
 function ensureMonth(y,m){
@@ -1073,6 +1173,7 @@ function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
 // ─── INIT ─────────────────────────────────────────────────────────────
 setupSelectors();
 renderAll();
+initAuth();
 
 // PWA
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
