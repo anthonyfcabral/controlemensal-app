@@ -1,7 +1,7 @@
 {
   "name": "Controle Mensal",
   "short_name": "Mensal",
-  "start_url": "./index.html",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#07111f",
   "theme_color": "#07111f",

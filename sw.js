@@ -1,4 +1,4 @@
-const CACHE = 'controle-mensal-v3';
+const CACHE = 'controle-mensal-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -17,8 +17,16 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
+// Network-first: sempre tenta buscar da rede, cai no cache só se offline
 self.addEventListener('fetch', e => {
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('./index.html')))
+    fetch(e.request)
+      .then(response => {
+        // Atualiza o cache com a versão da rede
+        const clone = response.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return response;
+      })
+      .catch(() => caches.match(e.request).then(r => r || caches.match('./index.html')))
   );
 });
