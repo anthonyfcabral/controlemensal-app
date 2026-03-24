@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+  <title>Controle Mensal</title>
+  <meta name="theme-color" content="#07111f"/>
+  <link rel="manifest" href="manifest.webmanifest"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root{
+      --bg:#07111f;
+      --bg2:#0b1220;
+      --panel:#0f172a;
+      --panel2:#172235;
+      --card:rgba(255,255,255,.05);
+      --line:rgba(255,255,255,.08);
+      --text:#f8fafc;
+      --muted:#94a3b8;
+      --primary:#22c55e;
+      --primary2:#16a34a;
+      --danger:#ef4444;
+      --warn:#f59e0b;
+      --blue:#3b82f6;
+      --chip:#101a2e;
+      --shadow:0 12px 30px rgba(0,0,0,.3);
+      --radius:18px;
+      --radius-sm:14px;
+      --max:1380px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    html,body{
+      font-family:'Inter',Arial,sans-serif;
+      background:
+        radial-gradient(ellipse at top left, rgba(34,197,94,.12) 0%, transparent 32%),
+        radial-gradient(ellipse at bottom right, rgba(59,130,246,.08) 0%, transparent 32%),
+        linear-gradient(180deg,var(--bg2) 0%,var(--bg) 100%);
+      color:var(--text);
+      min-height:100vh;
+    }
+
+    /* ─── Layout ─── */
+    .app{width:min(var(--max),100%);margin:0 auto;padding:20px 18px 40px}
+
+    .topbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:16px;
+      flex-wrap:wrap;
+      margin-bottom:24px;
+    }
+    .title-wrap h1{
+      font-size:clamp(1.4rem,2.2vw,2rem);
+      letter-spacing:-.03em;
+      line-height:1.1;
+      background:linear-gradient(135deg,#f8fafc,#94a3b8);
+      -webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;
+    }
+    .title-wrap p{color:var(--muted);font-size:.9rem;margin-top:4px}
+
+    .nav-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .nav-controls select,.nav-controls button{
+      background:var(--panel2);border:1px solid var(--line);color:var(--text);
+      border-radius:12px;padding:10px 14px;font-size:.92rem;outline:none;cursor:pointer;
+      font-family:inherit;min-height:44px;
+    }
+    .nav-controls button{font-weight:700;transition:transform .15s,opacity .15s}
+    .nav-controls button:hover{transform:translateY(-1px)}
+    .btn-primary-sm{background:linear-gradient(135deg,var(--primary),var(--primary2));border:none!important;color:#fff}
+
+    /* Summary cards row */
+    .summary-row{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+      gap:14px;
+      margin-bottom:24px;
+    }
+    .s-card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:var(--radius-sm);
+      padding:16px;
+      display:flex;flex-direction:column;gap:6px;
+      transition:transform .2s,box-shadow .2s;
+    }
+    .s-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+    .s-card .s-label{font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+    .s-card .s-value{font-size:1.3rem;font-weight:800;letter-spacing:-.03em}
+    .s-card .s-sub{font-size:.76rem;color:var(--muted);margin-top:2px}
+    .s-card.s-income{border-color:rgba(34,197,94,.25);background:rgba(34,197,94,.06)}
+    .s-card.s-fixed{border-color:rgba(59,130,246,.25);background:rgba(59,130,246,.06)}
+    .s-card.s-card-color{border-color:rgba(168,85,247,.25);background:rgba(168,85,247,.06)}
+    .s-card.s-sobra{border-color:rgba(245,158,11,.25);background:rgba(245,158,11,.06)}
+    .val-green{color:#86efac}
+    .val-blue{color:#93c5fd}
+    .val-purple{color:#d8b4fe}
+    .val-yellow{color:#fde68a}
+    .val-red{color:#fca5a5}
+    .s-card{
+      background:var(--panel);border:1px solid var(--line);padding:14px;
+      border-radius:var(--radius);display:flex;flex-direction:column;gap:4px;
+      position:relative;overflow:hidden;
+    }
+    .s-label{font-size:.75rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+    .s-value{font-size:1.25rem;font-weight:800}
+    .s-sub{font-size:.72rem;color:var(--muted);opacity:.8}
+    .val-green{color:var(--primary)}
+    .val-blue{color:var(--blue)}
+    .val-purple{color:var(--purple)}
+    .val-yellow{color:var(--yellow)}
+    .val-red{color:var(--red)}
+
+    .panel{
+      background:var(--panel);border:1px solid var(--line);
+      border-radius:var(--radius);padding:16px;margin-bottom:16px;
+    }
+    .panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+    .panel-header h2{font-size:.95rem;font-weight:700;display:flex;align-items:center;gap:8px}
+    .badge{background:var(--chip);color:var(--primary);padding:3px 8px;border-radius:6px;font-size:.75rem;font-weight:700}
+
+    .main-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    /* Form */
+    .field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+    .field label{font-size:.82rem;color:var(--muted)}
+    .field input,.field select{
+      background:var(--panel2);border:1px solid var(--line);color:var(--text);
+      border-radius:12px;padding:11px 14px;font-size:.94rem;outline:none;
+      font-family:inherit;width:100%;min-height:44px;
+    }
+    .field input:focus,.field select:focus{border-color:rgba(34,197,94,.6);box-shadow:0 0 0 3px rgba(34,197,94,.12)}
+    .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+    /* Buttons */
+    button.btn{
+      border:1px solid var(--line);background:var(--panel2);color:var(--text);
+      border-radius:12px;padding:11px 14px;font-size:.9rem;cursor:pointer;
+      font-family:inherit;font-weight:700;min-height:44px;width:100%;
+      transition:transform .15s,opacity .15s;
+    }
+    button.btn:hover{transform:translateY(-1px)}
+    button.btn:active{transform:translateY(0)}
+    .btn-green{background:linear-gradient(135deg,var(--primary),var(--primary2));border:none;color:#fff}
+    .btn-danger{background:rgba(239,68,68,.14);color:#fca5a5;border-color:rgba(239,68,68,.3)}
+    .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--muted);padding:6px 10px;min-height:auto;width:auto;font-size:.8rem}
+
+    /* Extras list */
+    .extras-list{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+    .extra-item{
+      display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;
+      background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;
+    }
+    .extra-item .extra-name{font-size:.9rem;font-weight:600}
+    .extra-item .extra-val{font-size:.9rem;color:#86efac;font-weight:700;white-space:nowrap}
+    .extra-item button{width:auto;min-height:auto;padding:5px 8px;font-size:.78rem}
+
+    /* Fixed / Card list */
+    .items-list{display:flex;flex-direction:column;gap:10px;max-height:420px;overflow:auto;padding-right:2px}
+    .fin-item{
+      display:grid;grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;
+      background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;
+      transition:border-color .2s,background .2s;
+    }
+    .fin-item.paid{
+      background:rgba(34,197,94,.07);
+      border-color:rgba(34,197,94,.22);
+    }
+    .fin-item.paid .fin-name{text-decoration:line-through;opacity:.6}
+    .fin-item .fin-check{
+      width:22px;height:22px;accent-color:var(--primary);cursor:pointer;flex-shrink:0;
+    }
+    .fin-item .fin-name{font-size:.9rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .fin-item .fin-val{font-size:.95rem;font-weight:800;white-space:nowrap;color:#86efac}
+    .fin-item .fin-val.unpaid{color:#fca5a5}
+    .fin-item button{width:auto;min-height:auto;padding:5px 8px;font-size:.76rem}
+
+    /* Progress bar */
+    .prog-wrap{margin:12px 0 4px}
+    .prog-label{display:flex;justify-content:space-between;font-size:.8rem;color:var(--muted);margin-bottom:6px}
+    .prog-track{width:100%;height:10px;border-radius:999px;background:rgba(255,255,255,.06);overflow:hidden}
+    .prog-fill{height:100%;border-radius:999px;transition:width .3s ease}
+    .prog-green{background:linear-gradient(90deg,#22c55e,#16a34a)}
+    .prog-red{background:linear-gradient(90deg,#ef4444,#dc2626)}
+    .prog-yellow{background:linear-gradient(90deg,#f59e0b,#f97316)}
+
+    /* Total box */
+    .total-box{
+      background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.2);
+      border-radius:12px;padding:12px 14px;
+      display:flex;justify-content:space-between;align-items:center;
+      margin-bottom:14px;
+    }
+    .total-box span{font-size:.88rem;color:var(--muted)}
+    .total-box strong{font-size:1.1rem;color:#86efac;font-weight:800}
+
+    /* Calculator box */
+    .calc-box{
+      background:rgba(59,130,246,.07);border:1px solid rgba(59,130,246,.2);
+      border-radius:14px;padding:14px;margin-bottom:14px;
+    }
+    .calc-box h3{font-size:.85rem;color:#93c5fd;margin-bottom:10px;font-weight:700}
+    .calc-result{
+      display:flex;justify-content:space-between;align-items:center;
+      margin-top:10px;padding-top:10px;border-top:1px solid rgba(59,130,246,.2);
+    }
+    .calc-result span{font-size:.85rem;color:var(--muted)}
+    .calc-result strong{font-size:1.05rem;color:#fca5a5;font-weight:800}
+
+    /* Charts area */
+    .charts-col{display:flex;flex-direction:column;gap:16px}
+    .chart-wrap{position:relative;width:100%;max-height:280px}
+    .chart-wrap canvas{max-height:260px}
+    .legend-grid{display:grid;gap:7px;margin-top:12px}
+    .legend-item{
+      display:grid;grid-template-columns:10px 1fr auto;gap:8px;align-items:center;
+      font-size:.82rem;
+    }
+    .legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+    .legend-val{color:var(--muted);font-weight:700;white-space:nowrap}
+
+    /* Bar chart custom */
+    .bar-chart{display:flex;flex-direction:column;gap:10px}
+    .bar-row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;font-size:.84rem}
+    .bar-row .bar-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px;color:var(--muted)}
+    .bar-track2{width:100%;height:8px;border-radius:999px;background:rgba(255,255,255,.06)}
+    .bar-fill2{height:100%;border-radius:999px;transition:width .4s ease}
+    .bar-row .bar-val{white-space:nowrap;font-weight:700;font-size:.82rem}
+
+    /* Divider */
+    .divider{border:none;border-top:1px solid var(--line);margin:14px 0}
+
+    /* Empty */
+    .empty{
+      text-align:center;padding:20px;color:var(--muted);
+      border:1px dashed var(--line);border-radius:14px;
+      background:rgba(255,255,255,.02);font-size:.88rem;
+    }
+
+    /* Tags/chips */
+    .chip-tag{display:inline-flex;align-items:center;gap:4px;background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 9px;font-size:.74rem;color:#dbeafe}
+
+    /* Scrollbar */
+    ::-webkit-scrollbar{width:5px;height:5px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:999px}
+
+    /* Notes */
+    .notes-area{
+      width:100%;background:var(--panel2);border:1px solid var(--line);
+      color:var(--text);border-radius:14px;padding:14px;
+      font-family:inherit;font-size:.9rem;min-height:100px;resize:vertical;outline:none;
+    }
+    .notes-area:focus{border-color:rgba(34,197,94,.5)}
+
+    /* Toast */
+    #toast{
+      position:fixed;bottom:24px;right:24px;
+      background:var(--panel2);border:1px solid var(--primary);
+      color:var(--text);padding:12px 18px;border-radius:14px;
+      font-size:.9rem;font-weight:600;z-index:9999;display:none;
+      box-shadow:0 8px 24px rgba(0,0,0,.4);
+    }
+
+    /* Modal */
+    .modal-overlay{
+      position:fixed;inset:0;background:rgba(0,0,0,.75);
+      display:none;align-items:center;justify-content:center;z-index:9000;
+      backdrop-filter:blur(4px);
+    }
+    .modal-overlay.open{display:flex}
+    .modal-box{
+      background:var(--panel);border:1px solid var(--line);
+      border-radius:var(--radius);padding:22px;
+      width:min(420px,94vw);max-height:90vh;overflow:auto;
+      box-shadow:0 24px 60px rgba(0,0,0,.5);
+    }
+    .modal-box h2{font-size:1rem;margin-bottom:16px}
+    .modal-footer{display:flex;gap:10px;margin-top:16px}
+    .modal-footer button{flex:1}
+
+    /* Responsive */
+    @media(max-width:1100px){
+      .main-grid{grid-template-columns:1fr}
+    }
+    @media(max-width:700px){
+      .topbar{flex-direction:column;align-items:stretch}
+      .nav-controls{flex-wrap:wrap;justify-content:center}
+      .summary-row{grid-template-columns:1fr 1fr}
+      .field-row{grid-template-columns:1fr}
+    }
+    @media(max-width:400px){
+      .app{padding:12px 10px 36px}
+      .tab-btn{font-size:.75rem;padding:8px 6px}
+    }
+  </style>
+</head>
+<body>
+<div id="toast"></div>
+
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box" id="modalBox">
+    <h2 id="modalTitle">Adicionar</h2>
+    <div id="modalContent"></div>
+    <div class="modal-footer">
+      <button class="btn btn-green" id="modalSave">Salvar</button>
+      <button class="btn" id="modalCancel">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="title-wrap">
+      <h1>📊 Controle Mensal</h1>
+      <p id="subtitleLabel">Resumo financeiro completo do mês</p>
+    </div>
+  <div class="nav-controls">
+      <select id="selMonth"></select>
+      <select id="selYear"></select>
+      <button class="btn btn-primary-sm" id="btnExport" title="Backup">📥</button>
+      <button class="btn btn-primary-sm" id="btnImport" title="Restaurar">📤</button>
+    </div>
+  </div>
+
+  <!-- TABS BAR -->
+  <div class="tabs-bar">
+    <button class="tab-btn active" onclick="switchTab('tab-resumo')">🏠 Resumo</button>
+    <button class="tab-btn" onclick="switchTab('tab-mensal')">🔒 Fixas / Rendas</button>
+    <button class="tab-btn" onclick="switchTab('tab-cartoes')">💳 Cartões</button>
+    <button class="tab-btn" onclick="switchTab('tab-graficos')">📈 Relatórios</button>
+  </div>
+
+  <!-- TAB: RESUMO -->
+  <div id="tab-resumo" class="tab-content active">
+    <div class="summary-row">
+      <div class="s-card s-income">
+        <span class="s-label">💰 Receita Total</span>
+        <span class="s-value val-green" id="sumIncome">R$ 0,00</span>
+      </div>
+      <div class="s-card s-fixed">
+        <span class="s-label">🔒 Fixas</span>
+        <span class="s-value val-blue" id="sumFixed">R$ 0,00</span>
+        <span class="s-sub" id="sumFixedSub">0 pago</span>
+      </div>
+      <div class="s-card s-card-color">
+        <span class="s-label">💳 Faturas</span>
+        <span class="s-value val-purple" id="sumCards">R$ 0,00</span>
+        <span class="s-sub" id="sumCardsSub">0 pago</span>
+      </div>
+      <div class="s-card s-sobra">
+        <span class="s-label">📈 Sobra</span>
+        <span class="s-value" id="sumSobra">R$ 0,00</span>
+      </div>
+      <div class="s-card" style="border-color:rgba(239,68,68,.2);background:rgba(239,68,68,.05)">
+        <span class="s-label">⚠️ A pagar</span>
+        <span class="s-value val-red" id="sumPending">R$ 0,00</span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header"><h2>📊 Distribuição Geral (Receita vs Gastos)</h2></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;align-items:center">
+        <div class="chart-wrap" style="max-width:300px;margin:0 auto">
+          <canvas id="chartPie"></canvas>
+        </div>
+        <div class="legend-grid" id="pieLegend"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: MENSAL (RECEITAS + FIXAS) -->
+  <div id="tab-mensal" class="tab-content">
+    <div class="main-grid">
+      <!-- RECEITAS -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>💰 Receitas</h2>
+          <span class="badge" id="badgeIncome">R$ 0,00</span>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Adiantamento</label><input type="text" id="inpAdiant" placeholder="0,00"/></div>
+          <div class="field"><label>Salário</label><input type="text" id="inpSal" placeholder="0,00"/></div>
+        </div>
+        <div class="total-box" id="totalRecBox" style="margin-top:10px">
+          <span>📌 Soma Fixo</span>
+          <strong id="lblTotalRec">R$ 0,00</strong>
+        </div>
+        <div class="extras-list" id="extrasList"></div>
+        <button class="btn" id="btnAddExtra" style="width:100%">+ Renda Extra</button>
+      </div>
+
+      <!-- FIXAS -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>🔒 Contas Fixas</h2>
+          <span class="badge" id="badgeFixed">R$ 0,00</span>
+        </div>
+        <div class="prog-wrap" style="margin-top:0">
+          <div class="prog-label"><span id="fixedProgLabel">0 pagas</span><span id="fixedProgPct">0%</span></div>
+          <div class="prog-track"><div class="prog-fill" id="fixedProgFill" style="width:0%"></div></div>
+        </div>
+        <hr class="divider"/>
+        <div class="items-list" id="fixedList"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+          <button class="btn btn-primary" id="btnAddFixed">+ Adicionar</button>
+          <button class="btn btn-green" id="btnReplicateYear" title="Copia p/ o Ano">🔄 Replicar</button>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h2>📝 Notas do Mês</h2></div>
+      <textarea class="notes-area" id="txtNotes" placeholder="Anotações..."></textarea>
+    </div>
+  </div>
+
+  <!-- TAB: CARTOES -->
+  <div id="tab-cartoes" class="tab-content">
+    <div class="main-grid">
+      <div class="panel">
+        <div class="panel-header">
+          <h2>💳 Faturas de Cartão</h2>
+          <span class="badge" id="badgeCards">R$ 0,00</span>
+        </div>
+        <div class="prog-wrap" style="margin-top:0">
+          <div class="prog-label"><span id="cardsProgLabel">0 pagas</span><span id="cardsProgPct">0%</span></div>
+          <div class="prog-track"><div class="prog-fill" id="cardsProgFill" style="width:0%"></div></div>
+        </div>
+        <hr class="divider"/>
+        <div class="items-list" id="cardsList"></div>
+        <button class="btn btn-primary" style="margin-top:10px;width:100%" id="btnAddCard">+ Lançar Parcela</button>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header"><h2>🧮 Calculadora de Fatura</h2></div>
+        <div class="field-row">
+          <div class="field"><label>Total Banco</label><input type="text" id="calcTotal" placeholder="0,00"/></div>
+          <div class="field"><label>Já guardado</label><input type="text" id="calcSaved" placeholder="0,00"/></div>
+        </div>
+        <div class="calc-result" style="margin-top:15px">
+          <span>💰 Falta Lançar:</span>
+          <strong id="calcResult">R$ 0,00</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: RELATORIOS -->
+  <div id="tab-graficos" class="tab-content">
+    <div class="main-grid">
+      <div class="panel">
+        <div class="panel-header"><h2>💳 Gastos por Cartão</h2></div>
+        <div class="chart-wrap" style="max-width:260px;margin:0 auto"><canvas id="chartCardPie"></canvas></div>
+        <div class="legend-grid" id="cardLegend"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h2>🔒 Detalhe de Fixas</h2></div>
+        <div class="bar-chart" id="fixedDetailsList"></div>
+      </div>
+    </div>
+    <div class="main-grid" style="margin-top:16px">
+      <div class="panel">
+        <div class="panel-header"><h2>⚖️ Fixas vs Cartões</h2></div>
+        <div class="bar-chart" id="fixedVsCardsChart"></div>
+        <div id="fixedVsCardsLegend" style="margin-top:12px; font-size:.8rem; color:var(--muted)"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h2>✅ Pago vs Pendente</h2></div>
+        <div class="bar-chart" id="paidBarChart"></div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header"><h2>📈 Evolução Anual</h2></div>
+      <div class="chart-wrap" style="max-height:220px"><canvas id="chartYear"></canvas></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+// ─── UTILS ────────────────────────────────────────────────────────────
+function money(v){ return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'}); }
+function parseBR(x){
+  let s=String(x??'').trim().replace(/\s+/g,'');
+  if(!s)return 0;
+  if(s.includes(',')&&s.includes('.'))s=s.replace(/\./g,'').replace(',','.');
+  else s=s.replace(',','.');
+  const n=Number(s);
+  return isFinite(n)?n:0;
+}
+function uid(){ return Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6); }
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.style.display='block';
+  clearTimeout(t._timer);t._timer=setTimeout(()=>t.style.display='none',2200);
+}
+
+// ─── STORAGE ──────────────────────────────────────────────────────────
+const DB_KEY='controle_mensal_v1';
+const MONTHS_PT=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const MONTHS_SHORT=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+function loadDB(){
+  try{
+    const raw=localStorage.getItem(DB_KEY);
+    if(raw){ const p=JSON.parse(raw); return p; }
+  }catch(e){}
+  return {months:{}};
+}
+function saveDB(){ localStorage.setItem(DB_KEY,JSON.stringify(state.db)); }
+function monthKey(y,m){ return `${y}-${String(m+1).padStart(2,'0')}`; }
+
+function ensureMonth(y,m){
+  const k=monthKey(y,m);
+  if(!state.db.months[k]) state.db.months[k]={
+    adiant:0, sal:0, extras:[],
+    fixed:[], cards:[],
+    notes:''
+  };
+  return state.db.months[k];
+}
+function getMonth(){ return ensureMonth(state.year,state.month); }
+
+// ─── STATE ────────────────────────────────────────────────────────────
+const now=new Date();
+const state={
+  db:loadDB(),
+  year:now.getFullYear(),
+  month:now.getMonth(),
+};
+
+// ─── SELECTORS ────────────────────────────────────────────────────────
+function setupSelectors(){
+  const sm=document.getElementById('selMonth');
+  const sy=document.getElementById('selYear');
+  MONTHS_PT.forEach((m,i)=>{
+    const o=document.createElement('option'); o.value=i; o.textContent=m; sm.appendChild(o);
+  });
+  for(let y=2024;y<=2030;y++){
+    const o=document.createElement('option'); o.value=y; o.textContent=y; sy.appendChild(o);
+  }
+  sm.value=state.month; sy.value=state.year;
+  sm.onchange=()=>{state.month=Number(sm.value);renderAll()};
+  sy.onchange=()=>{state.year=Number(sy.value);renderAll()};
+}
+
+// ─── CALCULATIONS ─────────────────────────────────────────────────────
+function calc(){
+  const m=getMonth();
+  const adiant=parseBR(m.adiant)||0;
+  const sal=parseBR(m.sal)||0;
+  const extraTotal=(m.extras||[]).reduce((a,x)=>a+(parseBR(x.val)||0),0);
+  const income=adiant+sal+extraTotal;
+
+  let fixedTotal=0, fixedPaid=0, fixedPending=0;
+  (m.fixed||[]).forEach(f=>{
+    const v=parseBR(f.val)||0;
+    fixedTotal+=v;
+    if(f.paid)fixedPaid+=v; else fixedPending+=v;
+  });
+
+  let cardsTotal=0, cardsPaid=0, cardsPending=0;
+  (m.cards||[]).forEach(c=>{
+    const v=parseBR(c.val)||0;
+    cardsTotal+=v;
+    if(c.paid)cardsPaid+=v; else cardsPending+=v;
+  });
+
+  const totalPend=fixedPending+cardsPending;
+  const sobra=income-fixedTotal-cardsTotal;
+
+  return {adiant,sal,extraTotal,income,fixedTotal,fixedPaid,fixedPending,cardsTotal,cardsPaid,cardsPending,totalPend,sobra};
+}
+
+// ─── RENDER ALL ───────────────────────────────────────────────────────
+function renderAll(){
+  const m=getMonth();
+  const c=calc();
+
+  document.getElementById('subtitleLabel').textContent=
+    `${MONTHS_PT[state.month]} ${state.year} · Resumo financeiro completo`;
+
+  // Sync inputs
+  document.getElementById('inpAdiant').value=m.adiant?String(m.adiant).replace('.',','):'';
+  document.getElementById('inpSal').value=m.sal?String(m.sal).replace('.',','):'';
+
+  // Total rec
+  document.getElementById('lblTotalRec').textContent=money(c.adiant+c.sal);
+
+  // Summary cards
+  document.getElementById('sumIncome').textContent=money(c.income);
+  document.getElementById('sumFixed').textContent=money(c.fixedTotal);
+  document.getElementById('sumFixedSub').textContent=`${(m.fixed||[]).filter(f=>f.paid).length} pagas`;
+  document.getElementById('sumCards').textContent=money(c.cardsTotal);
+  document.getElementById('sumCardsSub').textContent=`${(m.cards||[]).filter(c=>c.paid).length} pagas`;
+  const sobraEl=document.getElementById('sumSobra');
+  sobraEl.textContent=money(c.sobra);
+  sobraEl.className='s-value '+(c.sobra>=0?'val-yellow':'val-red');
+  document.getElementById('sumPending').textContent=money(c.totalPend);
+
+  // Badges
+  document.getElementById('badgeIncome').textContent=money(c.income);
+  document.getElementById('badgeFixed').textContent=money(c.fixedTotal);
+  document.getElementById('badgeCards').textContent=money(c.cardsTotal);
+
+  renderExtras(m,c);
+  renderFixed(m,c);
+  renderCards(m,c);
+  renderNotes(m);
+  renderCharts(m,c);
+}
+
+// ─── EXTRAS ───────────────────────────────────────────────────────────
+function renderExtras(m,c){
+  const list=document.getElementById('extrasList');
+  const extras=m.extras||[];
+  if(!extras.length){ list.innerHTML='<div class="empty">Nenhuma renda extra</div>'; return; }
+  list.innerHTML=extras.map((e,i)=>`
+    <div class="extra-item">
+      <div>
+        <div class="extra-name">${escH(e.name)}</div>
+      </div>
+      <span class="extra-val">${money(parseBR(e.val))}</span>
+      <button class="btn btn-danger btn-ghost" onclick="deleteExtra(${i})">🗑</button>
+    </div>
+  `).join('');
+}
+
+function deleteExtra(i){
+  const m=getMonth(); m.extras.splice(i,1); saveDB(); renderAll(); toast('Renda removida');
+}
+
+// ─── FIXED ────────────────────────────────────────────────────────────
+function renderFixed(m,c){
+  const list=document.getElementById('fixedList');
+  const fixed=m.fixed||[];
+  // Progress
+  const total=fixed.length;
+  const paid=fixed.filter(f=>f.paid).length;
+  const paidAmt=c.fixedPaid; const totalAmt=c.fixedTotal;
+  const pct=totalAmt>0?Math.round(paidAmt/totalAmt*100):0;
+  document.getElementById('fixedProgLabel').textContent=`${paid} de ${total} pagas`;
+  document.getElementById('fixedProgPct').textContent=`${pct}%`;
+  const fill=document.getElementById('fixedProgFill');
+  fill.style.width=pct+'%';
+  fill.className='prog-fill '+(pct>=100?'prog-green':pct>=50?'prog-yellow':'prog-red');
+
+  if(!fixed.length){ list.innerHTML='<div class="empty">Nenhuma conta fixa cadastrada</div>'; return; }
+  list.innerHTML=fixed.map((f,i)=>`
+    <div class="fin-item ${f.paid?'paid':''}">
+      <input type="checkbox" class="fin-check" ${f.paid?'checked':''} onchange="toggleFixed(${i},this.checked)"/>
+      <span class="fin-name">${escH(f.name)}</span>
+      <span class="fin-val ${f.paid?'':'unpaid'}">${money(parseBR(f.val))}</span>
+      <button class="btn btn-danger btn-ghost" onclick="deleteFixed(${i})">🗑</button>
+    </div>
+  `).join('');
+}
+
+function toggleFixed(i,paid){
+  const m=getMonth(); m.fixed[i].paid=paid; saveDB(); renderAll();
+  toast(paid?'✅ Marcada como paga':'Desmarcada');
+}
+function deleteFixed(i){
+  if(!confirm('Remover esta conta fixa?'))return;
+  const m=getMonth(); m.fixed.splice(i,1); saveDB(); renderAll(); toast('Conta removida');
+}
+
+// ─── CARDS LIST ───────────────────────────────────────────────────────
+function renderCards(m,c){
+  const list=document.getElementById('cardsList');
+  const cards=m.cards||[];
+  const total=cards.length;
+  const paid=cards.filter(c=>c.paid).length;
+  const paidAmt=c.cardsPaid; const totalAmt=c.cardsTotal;
+  const pct=totalAmt>0?Math.round(paidAmt/totalAmt*100):0;
+  document.getElementById('cardsProgLabel').textContent=`${paid} de ${total} pagas`;
+  document.getElementById('cardsProgPct').textContent=`${pct}%`;
+  const fill=document.getElementById('cardsProgFill');
+  fill.style.width=pct+'%';
+  fill.className='prog-fill '+(pct>=100?'prog-green':pct>=50?'prog-yellow':'prog-red');
+
+  if(!cards.length){ list.innerHTML='<div class="empty">Nenhuma fatura lançada</div>'; return; }
+  list.innerHTML=cards.map((card,i)=>`
+    <div class="fin-item ${card.paid?'paid':''}">
+      <input type="checkbox" class="fin-check" ${card.paid?'checked':''} onchange="toggleCard(${i},this.checked)"/>
+      <div style="overflow:hidden">
+        <div class="fin-name">${escH(card.name)}</div>
+        ${card.cardName?`<div style="font-size:.74rem;color:var(--muted);margin-top:2px">💳 ${escH(card.cardName)}</div>`:''}
+      </div>
+      <span class="fin-val ${card.paid?'':'unpaid'}">${money(parseBR(card.val))}</span>
+      <button class="btn btn-danger btn-ghost" onclick="deleteCard(${i})">🗑</button>
+    </div>
+  `).join('');
+}
+
+function toggleCard(i,paid){
+  const m=getMonth(); m.cards[i].paid=paid; saveDB(); renderAll();
+  toast(paid?'✅ Marcada como paga':'Desmarcada');
+}
+function deleteCard(i){
+  if(!confirm('Remover este lançamento?'))return;
+  const m=getMonth(); m.cards.splice(i,1); saveDB(); renderAll(); toast('Removido');
+}
+
+// ─── NOTES ────────────────────────────────────────────────────────────
+function renderNotes(m){
+  const txt=document.getElementById('txtNotes');
+  txt.value=m.notes||'';
+}
+
+// ─── CHARTS ───────────────────────────────────────────────────────────
+let chartPie=null, chartCardPie=null, chartYear=null;
+
+function renderCharts(m,c){
+  renderPieChart(c);
+  renderCardPieChart(m,c);
+  renderFixedDetails(m,c);
+  renderFixedVsCards(c);
+  renderPaidBar(m,c);
+  renderYearChart();
+}
+
+function renderPieChart(c){
+  const ctx=document.getElementById('chartPie').getContext('2d');
+  const data=[
+    {label:'Receita',val:c.income,color:'#22c55e'},
+    {label:'Fixas',val:c.fixedTotal,color:'#3b82f6'},
+    {label:'Faturas',val:c.cardsTotal,color:'#a855f7'},
+  ];
+  const sobraV=Math.max(0,c.sobra);
+  if(sobraV>0) data.push({label:'Sobra',val:sobraV,color:'#f59e0b'});
+
+  if(chartPie)chartPie.destroy();
+  chartPie=new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels:data.map(d=>d.label),
+      datasets:[{data:data.map(d=>d.val),backgroundColor:data.map(d=>d.color),borderWidth:0,hoverOffset:8}]
+    },
+    options:{
+      responsive:true,cutout:'62%',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+money(ctx.raw)}}}
+    }
+  });
+
+  const leg=document.getElementById('pieLegend');
+  const total=data.reduce((a,d)=>a+d.val,0)||1;
+  leg.innerHTML=data.map(d=>`
+    <div class="legend-item">
+      <span class="legend-dot" style="background:${d.color}"></span>
+      <span>${d.label}</span>
+      <span class="legend-val">${money(d.val)} <span style="opacity:.55">(${Math.round(d.val/total*100)}%)</span></span>
+    </div>
+  `).join('');
+}
+
+function renderCardPieChart(m,c){
+  const ctx=document.getElementById('chartCardPie').getContext('2d');
+  const cards=m.cards||[];
+  const groups={};
+  cards.forEach(card=>{
+    const name=card.cardName || 'Outros';
+    const val=parseBR(card.val)||0;
+    groups[name]=(groups[name]||0)+val;
+  });
+
+  const labels=Object.keys(groups);
+  const vals=Object.values(groups);
+  const colors=['#a855f7','#3b82f6','#22c55e','#f59e0b','#ef4444','#ec4899','#8b5cf6'];
+
+  if(chartCardPie)chartCardPie.destroy();
+  if(!labels.length){
+    document.getElementById('cardLegend').innerHTML='<div class="empty">Sem faturas lançadas</div>';
+    return;
+  }
+
+  chartCardPie=new Chart(ctx,{
+    type:'doughnut',
+    data:{
+      labels,
+      datasets:[{data:vals,backgroundColor:colors.slice(0,labels.length),borderWidth:0,hoverOffset:8}]
+    },
+    options:{
+      responsive:true,cutout:'62%',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' '+money(ctx.raw)}}}
+    }
+  });
+
+  const leg=document.getElementById('cardLegend');
+  const total=vals.reduce((a,v)=>a+v,0)||1;
+  leg.innerHTML=labels.map((l,i)=>`
+    <div class="legend-item">
+      <span class="legend-dot" style="background:${colors[i]}"></span>
+      <span>${l}</span>
+      <span class="legend-val">${money(vals[i])} <span style="opacity:.55">(${Math.round(vals[i]/total*100)}%)</span></span>
+    </div>
+  `).join('');
+}
+
+function renderFixedVsCards(c){
+  const container=document.getElementById('fixedVsCardsChart');
+  const totalExp=c.fixedTotal+c.cardsTotal;
+  const rows=[
+    {label:'Contas Fixas',val:c.fixedTotal,color:'#3b82f6'},
+    {label:'Cartões',val:c.cardsTotal,color:'#a855f7'},
+  ];
+
+  if(totalExp===0){ container.innerHTML='<div class="empty">Sem gastos</div>'; return; }
+  const max=Math.max(c.fixedTotal,c.cardsTotal,1);
+  container.innerHTML=rows.map(r=>`
+    <div class="bar-row">
+      <span class="bar-label">${r.label}</span>
+      <div class="bar-track2">
+        <div class="bar-fill2" style="width:${Math.round(r.val/max*100)}%;background:${r.color}"></div>
+      </div>
+      <span class="bar-val" style="color:${r.color}">${money(r.val)} <span style="font-weight:400;opacity:.6">(${Math.round(r.val/totalExp*100)}%)</span></span>
+    </div>
+  `).join('');
+
+  const pctFixed=Math.round(c.fixedTotal/totalExp*100);
+  const pctCards=Math.round(c.cardsTotal/totalExp*100);
+  document.getElementById('fixedVsCardsLegend').textContent=`As fixas representam ${pctFixed}% do seu custo de vida este mês, enquanto os cartões são ${pctCards}%.`;
+}
+
+function renderFixedDetails(m,c){
+  const container=document.getElementById('fixedDetailsList');
+  const fixed=m.fixed||[];
+  if(!fixed.length){ container.innerHTML='<div class="empty">Sem contas fixas</div>'; return; }
+  
+  const totalF=c.fixedTotal||1;
+  const sorted=[...fixed].sort((a,b)=>parseBR(b.val)-parseBR(a.val));
+  
+  container.innerHTML=sorted.map(f=>{
+    const v=parseBR(f.val);
+    const p=Math.round(v/totalF*100);
+    return `
+      <div class="bar-row">
+        <span class="bar-label">${escH(f.name)}</span>
+        <div class="bar-track2">
+          <div class="bar-fill2" style="width:${p}%;background:var(--blue)"></div>
+        </div>
+        <span class="bar-val">${money(v)} <span style="font-weight:400;opacity:.6">(${p}%)</span></span>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderPaidBar(m,c){
+  const container=document.getElementById('paidBarChart');
+  const rows=[
+    {label:'🔒 Fixas Pagas',val:c.fixedPaid,total:c.fixedTotal,color:'#3b82f6'},
+    {label:'🔒 Fixas Pend.',val:c.fixedPending,total:c.fixedTotal,color:'#ef4444'},
+    {label:'💳 Faturas Pagas',val:c.cardsPaid,total:c.cardsTotal,color:'#a855f7'},
+    {label:'💳 Faturas Pend.',val:c.cardsPending,total:c.cardsTotal,color:'#f59e0b'},
+  ].filter(r=>r.val>0||r.total>0);
+
+  if(!rows.length){ container.innerHTML='<div class="empty">Sem dados ainda</div>'; return; }
+  const max=Math.max(...rows.map(r=>r.val),1);
+  container.innerHTML=rows.map(r=>`
+    <div class="bar-row">
+      <span class="bar-label">${r.label}</span>
+      <div class="bar-track2">
+        <div class="bar-fill2" style="width:${Math.round(r.val/max*100)}%;background:${r.color}"></div>
+      </div>
+      <span class="bar-val" style="color:${r.color}">${money(r.val)}</span>
+    </div>
+  `).join('');
+}
+
+function renderYearChart(){
+  const ctx=document.getElementById('chartYear').getContext('2d');
+  const labels=MONTHS_SHORT;
+  const income=[],fixed=[],cards=[];
+  for(let mo=0;mo<12;mo++){
+    const k=monthKey(state.year,mo);
+    const m=state.db.months[k];
+    if(!m){income.push(0);fixed.push(0);cards.push(0);continue;}
+    income.push((parseBR(m.adiant)||0)+(parseBR(m.sal)||0)+(m.extras||[]).reduce((a,x)=>a+(parseBR(x.val)||0),0));
+    fixed.push((m.fixed||[]).reduce((a,f)=>a+(parseBR(f.val)||0),0));
+    cards.push((m.cards||[]).reduce((a,c)=>a+(parseBR(c.val)||0),0));
+  }
+  if(chartYear)chartYear.destroy();
+  chartYear=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'Receita',data:income,backgroundColor:'rgba(34,197,94,.5)',borderRadius:4},
+        {label:'Fixas',data:fixed,backgroundColor:'rgba(59,130,246,.5)',borderRadius:4},
+        {label:'Faturas',data:cards,backgroundColor:'rgba(168,85,247,.5)',borderRadius:4},
+      ]
+    },
+    options:{
+      responsive:true,
+      plugins:{legend:{labels:{color:'#94a3b8',font:{size:10}}}},
+      scales:{
+        x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}},
+        y:{ticks:{color:'#94a3b8',font:{size:10},callback:v=>v.toLocaleString('pt-BR',{notation:'compact'})},grid:{color:'rgba(255,255,255,.05)'}},
+      }
+    }
+  });
+}
+
+// ─── MODAL ────────────────────────────────────────────────────────────
+let modalCallback=null;
+
+function openModal(title,contentHTML,saveCb){
+  document.getElementById('modalTitle').textContent=title;
+  document.getElementById('modalContent').innerHTML=contentHTML;
+  modalCallback=saveCb;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal(){
+  document.getElementById('modalOverlay').classList.remove('open');
+  modalCallback=null;
+}
+
+document.getElementById('modalSave').onclick=()=>{ if(modalCallback)modalCallback(); };
+document.getElementById('modalCancel').onclick=closeModal;
+document.getElementById('modalOverlay').onclick=e=>{ if(e.target===document.getElementById('modalOverlay'))closeModal(); };
+
+// ─── ADD HANDLERS ─────────────────────────────────────────────────────
+document.getElementById('btnReplicateYear').onclick=()=>{
+  const m=getMonth();
+  const currentMonthName = MONTHS_PT[state.month];
+  if(!m.fixed.length && !m.cards.length){ 
+    toast('⚠️ Nada para copiar em '+currentMonthName); 
+    return; 
+  }
+  const msg='Deseja copiar as Fixas e Cartões DE '+currentMonthName+' para TODOS os outros meses de '+state.year+'?\n\nIsso SOBRESCREVERÁ o que já existe nos outros meses.';
+  if(!confirm(msg)) return;
+
+  const filteredFixed=(m.fixed||[]).filter(f=>!/joão|joao|crea/i.test(f.name)).map(f=>({...f,paid:false,id:uid()}));
+  const filteredCards=(m.cards||[]).map(c=>({...c,val:0,paid:false,id:uid()}));
+
+  for(let mo=0;mo<12;mo++){
+    if(mo===state.month)continue;
+    const target=ensureMonth(state.year,mo);
+    target.fixed=JSON.parse(JSON.stringify(filteredFixed)).map(f=>({...f,id:uid()}));
+    target.cards=JSON.parse(JSON.stringify(filteredCards)).map(c=>({...c,id:uid()}));
+  }
+  saveDB();
+  toast('✅ Coisas de '+currentMonthName+' copiadas p/ o ano todo!');
+};
+
+function switchTab(tabId){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  const btn = document.querySelector(`button[onclick="switchTab('${tabId}')"]`);
+  if(btn) btn.classList.add('active');
+  document.getElementById(tabId).classList.add('active');
+  renderAll(); 
+}
+
+document.getElementById('btnAddExtra').onclick=()=>{
+  openModal('➕ Renda Extra',`
+    <div class="field"><label>Descrição</label><input id="mExtraName" type="text" placeholder="Ex: Freelance, Bônus..."/></div>
+    <div class="field"><label>Valor (R$)</label><input id="mExtraVal" type="text" inputmode="decimal" placeholder="0,00"/></div>
+  `,()=>{
+    const name=document.getElementById('mExtraName').value.trim();
+    const val=parseBR(document.getElementById('mExtraVal').value);
+    if(!name||!val){ toast('⚠️ Preencha nome e valor'); return; }
+    const m=getMonth();
+    if(!m.extras)m.extras=[];
+    m.extras.push({id:uid(),name,val});
+    saveDB(); renderAll(); closeModal(); toast('✅ Renda extra adicionada');
+  });
+};
+
+document.getElementById('btnAddFixed').onclick=()=>{
+  openModal('🔒 Conta Fixa',`
+    <div class="field"><label>Descrição</label><input id="mFixName" type="text" placeholder="Ex: Aluguel, Internet..."/></div>
+    <div class="field"><label>Valor (R$)</label><input id="mFixVal" type="text" inputmode="decimal" placeholder="0,00"/></div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="mFixPaid" style="width:auto;accent-color:#22c55e"/> Já pago
+      </label>
+    </div>
+  `,()=>{
+    const name=document.getElementById('mFixName').value.trim();
+    const val=parseBR(document.getElementById('mFixVal').value);
+    const paid=document.getElementById('mFixPaid').checked;
+    if(!name||!val){ toast('⚠️ Preencha nome e valor'); return; }
+    const m=getMonth();
+    if(!m.fixed)m.fixed=[];
+    m.fixed.push({id:uid(),name,val,paid});
+    saveDB(); renderAll(); closeModal(); toast('✅ Conta fixa adicionada');
+  });
+};
+
+document.getElementById('btnAddCard').onclick=()=>{
+  const suggested=calcResult();
+  openModal('💳 Parcela / Assinatura',`
+    <div class="field"><label>Descrição</label><input id="mCardDesc" type="text" placeholder="Ex: Nubank - Parcelas, Netflix..."/></div>
+    <div class="field"><label>Cartão (opcional)</label><input id="mCardName" type="text" placeholder="Ex: Nubank, Inter..."/></div>
+    <div class="field"><label>Valor (R$)</label><input id="mCardVal" type="text" inputmode="decimal" placeholder="0,00" value="${suggested>0?String(suggested).replace('.',','):''}"/></div>
+    <div class="field">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="mCardPaid" style="width:auto;accent-color:#22c55e"/> Já paga
+      </label>
+    </div>
+  `,()=>{
+    const name=document.getElementById('mCardDesc').value.trim();
+    const cardName=document.getElementById('mCardName').value.trim();
+    const val=parseBR(document.getElementById('mCardVal').value);
+    const paid=document.getElementById('mCardPaid').checked;
+    if(!name||!val){ toast('⚠️ Preencha descrição e valor'); return; }
+    const m=getMonth();
+    if(!m.cards)m.cards=[];
+    m.cards.push({id:uid(),name,cardName,val,paid});
+    saveDB(); renderAll(); closeModal(); toast('✅ Fatura lançada');
+  });
+};
+
+// ─── CALCULADORA ──────────────────────────────────────────────────────
+function calcResult(){
+  const t=parseBR(document.getElementById('calcTotal').value);
+  const s=parseBR(document.getElementById('calcSaved').value);
+  const r=Math.max(0,t-s);
+  document.getElementById('calcResult').textContent=money(r);
+  return r;
+}
+document.getElementById('calcTotal').oninput=calcResult;
+document.getElementById('calcSaved').oninput=calcResult;
+
+// ─── INPUT BINDINGS ───────────────────────────────────────────────────
+document.getElementById('inpAdiant').onchange=()=>{
+  getMonth().adiant=parseBR(document.getElementById('inpAdiant').value);
+  saveDB(); renderAll();
+};
+document.getElementById('inpSal').onchange=()=>{
+  getMonth().sal=parseBR(document.getElementById('inpSal').value);
+  saveDB(); renderAll();
+};
+document.getElementById('txtNotes').oninput=()=>{
+  getMonth().notes=document.getElementById('txtNotes').value;
+  saveDB();
+};
+
+// ─── BKP / IMPORT ─────────────────────────────────────────────────────
+document.getElementById('btnExport').onclick=()=>{
+  saveDB();
+  const blob=new Blob([JSON.stringify(state.db,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`controle-mensal-bkp-${monthKey(state.year,state.month)}.json`; a.click();
+  toast('✅ Backup exportado');
+};
+document.getElementById('btnImport').onclick=()=>{
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='.json';
+  inp.onchange=e=>{
+    const f=e.target.files[0]; if(!f)return;
+    const r=new FileReader();
+    r.onload=ev=>{
+      try{
+        const o=JSON.parse(ev.target.result);
+        if(!o||!o.months)throw 0;
+        localStorage.setItem(DB_KEY,JSON.stringify(o));
+        location.reload();
+      }catch{ toast('❌ Arquivo inválido'); }
+    };
+    r.readAsText(f);
+  };
+  inp.click();
+};
+
+// ─── HELPERS ──────────────────────────────────────────────────────────
+function escH(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ─── INIT ─────────────────────────────────────────────────────────────
+setupSelectors();
+renderAll();
+
+// PWA
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
